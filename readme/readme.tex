@@ -71,7 +71,7 @@ ELBO loss is adapted to encode Dirichlet process:
     In practice, the number of samples in MC simulation is set to 1.
 
     \item For the reconstruction term, we consider 
-    \[ \frac{1}{|pos|} \sum_{(i,j) \in pos} \log p(Z_{i}^T Z_{j})- \frac{1}{|neg|}\sum_{(i,j) \in neg} \log(1-Z_i^T Z_j) \]
+    \[ -\frac{1}{|pos|} \sum_{(i,j) \in pos} \log p(Z_{i}^T Z_{j})+ \frac{1}{|neg|}\sum_{(i,j) \in neg} \log(1-Z_i^T Z_j) \]
 
     \item 
     Formally, the ELBO loss for vq-vae wouldn't contain the second term, 
@@ -88,7 +88,8 @@ ELBO loss is adapted to encode Dirichlet process:
     \[ E_q[\log \frac{q(Z)}{p(Z)}] = \frac{1}{M} \sum_{m=1}^M E_q[\log \frac{q(Z)}{p(Z|v_m)} ], \ v_m \sim Beta(1,\alpha_0) \]
     \item 
     Thus,
-    \[  L = \frac{1}{|pos|} \sum_{(i,j) \in pos} \log p(Z_{i}^T Z_{j})- \frac{1}{|neg|}\sum_{(i,j) \in neg} \log(1-Z_i^T Z_j) + \frac{1}{M} \sum_{m=1}^M E_q[\log \frac{q(Z)}{p(Z|v_m)}] \]
+    \[  L = - \frac{1}{|pos|} \sum_{(i,j) \in pos} \log p(Z_{i}^T Z_{j}) 
+    + \frac{1}{|neg|}\sum_{(i,j) \in neg} \log(1-Z_i^T Z_j) + \frac{1}{M} \sum_{m=1}^M E_q[\log \frac{q(Z)}{p(Z|v_m)}] \]
 \end{itemize}
 
 
@@ -139,10 +140,13 @@ Also, paying different attention for positional and feature embedding might have
 
 5. Since we consider positional embedding, it is not inductive.
 
-Potentially, change the strutucre of current method:
+Potentially, changing the strutucre of current method might solve these problems:
 
-1. Other ways to update parmeters instead of using loss function 
-2. Consider mixing the two embedding / distances
+1. Other ways to update parmeters without using loss function 
+
+2. Consider more efficient way of mixing the two embedding / distances
+
 3. Consider the codebook as complete graph, update the codebook (similar to MP on coarsened graph)
-4. Generate unique node embedding during backpropagation.
+
+4. Generate unique node embedding.
 \end{document}
