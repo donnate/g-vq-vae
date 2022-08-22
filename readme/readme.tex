@@ -14,12 +14,12 @@ The computation for the embedding of the aggregated nodes requires $O(N^2)$. $([
 , thus non-scalable.
 
 2.
-As far as I know, none of the current sparse graphical pooling method are differentiable.
+None of the current sparse graphical pooling method are differentiable.
 Typically, an importance score is learned and then sparsity is achieved by top selection.
 
 3.
 For top selection method, the embedding for coarsened graph only contain information for selected cluster/nodes,
-some information in the original graph may be lost.
+some information / structure in the original graph may be lost.
 
 
 \section{Model}
@@ -34,9 +34,9 @@ $D$ : dimension of embedding
 
 $A$ : Adjacency matrix [N*N]
 
-$X$ : Positional matrix [N*D]
+$X$ : Positional matrix [N*$D_x$]
 
-$F$ : Feature matrix [N*D]
+$F$ : Feature matrix [N*$D_f$]
 
 $C$ : codebook vectors [K*D]
 
@@ -47,34 +47,36 @@ $DS$ : distance matrix [N*K]
 \subsubsection{Algorithm}
 \hfill
 
-1. Initialize embedding X0, codebook C
+1. Randomly initialize embedding X0, codebook C
 
 2. Use two GCN layers to capture local structure: X = GCN(GCN(X0, A), A)
 
 3. Compute the distance matrix $DS$, where $DS[i,j] = distances(X_i, C_j)$  
 
-4. Quantize the embedding with closest vector in the notebook Z 
+4. Replace the node embedding with closest vector in the notebook as $Z_x$
 
 \subsubsection{Loss function}
 \hfill
 
-Consider the sum of vq-Loss and ELBO loss as the loss function, where vq Loss is the same as the original paper[1]: $||Z-sg(X)||^2 + \beta ||X-sg(Z)||^2$.
+Consider the sum of vq loss and ELBO loss as the loss function, where vq Loss is the same as the original paper: $||Z-sg(X)||^2 + \beta ||X-sg(Z)||^2$.
 
 ELBO loss is adapted to encode Dirichlet process: 
 \begin{itemize}
     \item
-    Original ELBO[2] is to maximize the lower bound 
-    \[E_q[ \log \frac{ p(X,Z) }{ q(Z) } ] = \log p(X|Z) + E_q[ \log \frac{ p(Z) }{ q(Z) }],\]
+    Original ELBO is to maximize the lower bound 
+    \[E_q[ \log \frac{ p(X,Z) }{ q(Z) } ] = E_q[\log p(X|Z)] + E_q[ \log \frac{ p(Z) }{ q(Z) }],\]
     or equivalently to minimize
-    \[ \log p(X|Z) + E_q[\log \frac{ q(Z) }{ p(Z) }],\]
-     where $Z$ is the latent variable. The first term is also known as reconstruction term, while the second term is the KL-divergence between $q(Z)$ and $p(Z)$.
+    \[ E_q[\log p(A|Z)]  + E_q[\log \frac{ q(Z) }{ p(Z) }],\]
+    where $Z$ is the latent variable. The first term is also known as reconstruction term, and the second term is the KL-divergence between $q(Z)$ and $p(Z)$.
+    In practice, the number of samples in MC simulation is set to 1.
+
     \item For the reconstruction term, we consider 
     \[ \frac{1}{|pos|} \sum_{(i,j) \in pos} \log p(Z_{i}^T Z_{j})- \frac{1}{|neg|}\sum_{(i,j) \in neg} \log(1-Z_i^T Z_j) \]
 
     \item 
     Formally, the ELBO loss for vq-vae wouldn't contain the second term, 
     since $q(Z)$ is a categorical distribution where the probablity for 
-    the closest class equals to 1. ($(\hat{\pi}_1, \cdots, \hat{\pi}_i, \cdots, \hat{\pi}_K) = (0, \cdots, 1, \cdots, 0)$)
+    the closest class equals to 1, i.e. ($(\hat{\pi}_1, \cdots, \hat{\pi}_i, \cdots, \hat{\pi}_K) = (0, \cdots, 1, \cdots, 0)$)
     To encode Dirichelet process in the loss function, we consider a continuous relaxation of this distribution as 
     $\hat{\pi}_k = \frac{1}{N}\sum_{n=1}^{N} \hat{\pi}_{nk}$, where $\hat{\pi}_{nk} \propto exp(-DS[n,k])$ and $\sum_{k=1}^{K}{\hat{\pi}_{nk}}=1$.
     \item 
@@ -95,7 +97,7 @@ ELBO loss is adapted to encode Dirichlet process:
 \hfill
 
 We assume that the feature matrix for each node is meaningful, 
-and aim to learn a quantized vector which is able to reflect the original feature vector. Similar algorithm and loss function is considered.
+and aim to learn a quantized vector to reflect the original feature vector. Similar algorithm and loss function is considered.
 
 \subsubsection{Algorithm}
 \hfill
@@ -108,7 +110,7 @@ and aim to learn a quantized vector which is able to reflect the original featur
 
 4. Quantize the embedding with closest vector in the notebook Z 
 
-5. Recover the initial embedding based on quantized latent embedding $F_d$ = MLP(Z)
+5. Recover the initial embedding based on quantized latent embedding $F_d$ = GCN(GCN(Z, A), A)
 
 \subsubsection{Loss function}
 \hfill
@@ -122,7 +124,7 @@ For supervised learning, we consider the complete quantized embedding as a conca
 
 
 
-\subsection{Practical concern}
+\section{Practical concern}
 Several practical concern is observed and recorded as floows:
 
 1. We use dirichlet prior with different parameter $\alpha_0$ to control the number of clusters, and thus a smaller $\alpha_0$ correspond with less number of clusters. 
